@@ -9,7 +9,7 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${fileDirname}",
+            "program": "/home/rsan/Trabalhos/Vibbra/teste-vibbra/app/main.go",
             "env": {
                 "CONF_DIR": "${fileDirname}/../conf",
                 "SCOPE": "localhost",

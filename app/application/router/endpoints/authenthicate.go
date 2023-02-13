@@ -18,7 +18,7 @@ func exportAuthenthicateEndpoints() []Route {
 	authEndpoints = append(authEndpoints, Route{
 		URI:         "/v1/authenticate/sso",
 		Method:      http.MethodPost,
-		HandlerFunc: controllers.AuthenticateHandler_V1,
+		HandlerFunc: controllers.AuthenticateSSOHandler_V1,
 		IsPublic:    true,
 	})
 

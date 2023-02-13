@@ -3,12 +3,13 @@ package webtoken
 import (
 	"errors"
 	"fmt"
-	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
+
+	"github.com/rsan92/teste-vibbra/internal/domain/entitys"
+	"github.com/rsan92/teste-vibbra/internal/infra/configuration"
 )
 
 type JWTSecurityToken struct{}
@@ -17,62 +18,44 @@ func NewJWTSecurityToken() JWTSecurityToken {
 	return JWTSecurityToken{}
 }
 
-func (jst JWTSecurityToken) CreateToken(userID uint64) (string, error) {
+func (jst JWTSecurityToken) CreateToken(user entitys.User) (string, error) {
 	permissions := jwt.MapClaims{}
-	permissions["auth"] = true
-	permissions["user_id"] = userID
-	permissions["expires"] = time.Now().Add(time.Hour * 2).Unix()
+	permissions["authorized"] = true
+	permissions["user_id"] = user.ID
+	permissions["user_login"] = user.Login
+	permissions["user_pass"] = user.Password
+	permissions["exp"] = time.Now().Add(time.Hour * 6).Unix()
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, permissions)
-	tokenAsString, err := token.SignedString("it_will_be_a_secret_key")
+
+	tokenAsString, err := token.SignedString([]byte(configuration.GetConfigurations().SecretKey))
 	if err != nil {
 		return "", err
 	}
 	return tokenAsString, nil
 }
 
-func (jst JWTSecurityToken) ValidateToken(request *http.Request) error {
-	tokenAsString := jst.extractTokenFromRequest(request)
-
+func (jst JWTSecurityToken) GetUserFromToken(tokenAsString string) (entitys.User, error) {
 	token, err := jwt.Parse(tokenAsString, jst.getVerificationKey)
 
 	if err != nil {
-		return err
-	}
-
-	if _, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		return nil
-	}
-
-	return errors.New("invalid securitytoken")
-}
-
-func (jst JWTSecurityToken) GetUserID(request *http.Request) (uint64, error) {
-	tokenAsString := jst.extractTokenFromRequest(request)
-
-	token, err := jwt.Parse(tokenAsString, jst.getVerificationKey)
-
-	if err != nil {
-		return 0, err
+		return entitys.User{}, err
 	}
 
 	if permissions, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		userID, err := strconv.ParseUint(fmt.Sprintf("%.0f", permissions["user_id"]), 10, 64)
+		response := entitys.User{}
+		var err error
+		response.ID, err = strconv.ParseUint(fmt.Sprintf("%.0f", permissions["user_id"]), 10, 64)
 		if err != nil {
-			return 0, err
+			return response, err
 		}
-		return userID, nil
+		response.Login = fmt.Sprintf("%v", permissions["user_login"])
+		response.Password = fmt.Sprintf("%v", permissions["user_pass"])
+
+		return response, nil
 	}
 
-	return 0, errors.New("invalid securitytoken or invalid permissions")
-}
-
-func (jst JWTSecurityToken) extractTokenFromRequest(req *http.Request) string {
-	token := req.Header.Get("Authorization")
-
-	if len(strings.Split(token, " ")) == 2 {
-		return strings.Split(token, " ")[1]
-	}
-	return ""
+	return entitys.User{}, errors.New("invalid securitytoken or invalid permissions")
 }
 
 func (jst JWTSecurityToken) getVerificationKey(token *jwt.Token) (interface{}, error) {
@@ -80,5 +63,5 @@ func (jst JWTSecurityToken) getVerificationKey(token *jwt.Token) (interface{}, e
 		return nil, fmt.Errorf("metodo de assinatura inesperado %v", token.Header["alg"])
 	}
 
-	return "config.SecretKey", nil
+	return []byte(configuration.GetConfigurations().SecretKey), nil
 }

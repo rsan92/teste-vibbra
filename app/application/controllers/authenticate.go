@@ -38,7 +38,6 @@ func AuthenticateHandler_V1(w http.ResponseWriter, r *http.Request) {
 		http_responses.Error(w, http.StatusInternalServerError, err)
 		return
 	}
-	//defer controller.UserRepository.End()
 
 	userFromRequest, err := controller.Service.ValidateInput(r, controller.ExpectedInput)
 	if err != nil {
@@ -46,7 +45,7 @@ func AuthenticateHandler_V1(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userFromDatabase, err := controller.Service.SearchUser(userFromRequest, controller.UserRepository)
+	userFromDatabase, err := controller.Service.SearchUserByLoginAndPassword(userFromRequest, controller.UserRepository)
 	if err != nil {
 		http_responses.Error(w, http.StatusInternalServerError, err)
 		return
@@ -65,9 +64,5 @@ func AuthenticateHandler_V1(w http.ResponseWriter, r *http.Request) {
 	response := controller.Service.BuildResponse(userFromDatabase, token)
 
 	http_responses.JSON(w, http.StatusOK, response)
-
-}
-
-func (c AuthenticateController_V1) AuthenticateSSOHandler_V1(w http.ResponseWriter, r *http.Request) {
 
 }

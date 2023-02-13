@@ -6,12 +6,12 @@ import (
 	"net/http"
 )
 
-func JSON(w http.ResponseWriter, statusCode int, dados interface{}) {
+func JSON(w http.ResponseWriter, statusCode int, info interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 
-	if dados != nil {
-		if err := json.NewEncoder(w).Encode(dados); err != nil {
+	if info != nil {
+		if err := json.NewEncoder(w).Encode(info); err != nil {
 			log.Fatal(err)
 		}
 	}
@@ -19,8 +19,8 @@ func JSON(w http.ResponseWriter, statusCode int, dados interface{}) {
 
 func Error(w http.ResponseWriter, statusCode int, err error) {
 	JSON(w, statusCode, struct {
-		Erro string `json:"erro"`
+		Error string `json:"erro"`
 	}{
-		Erro: err.Error(),
+		Error: err.Error(),
 	})
 }

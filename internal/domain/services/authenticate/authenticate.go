@@ -14,7 +14,7 @@ import (
 
 type IAuthenticateService interface {
 	ValidateInput(*http.Request, models.AuthenticateInputRequest) (entitys.User, error)
-	SearchUser(entitys.User, user.IUserRepository) (entitys.User, error)
+	SearchUserByLoginAndPassword(entitys.User, user.IUserRepository) (entitys.User, error)
 	GenerateWebToken(entitys.User) (string, error)
 	BuildResponse(entitys.User, string) models.AuthenticateResponseOutput
 }
@@ -48,13 +48,15 @@ func (s AuthenticateService) ValidateInput(r *http.Request, expectedInput models
 	return response, nil
 }
 
-func (s AuthenticateService) SearchUser(userFromRequest entitys.User, repository user.IUserRepository) (entitys.User, error) {
+func (s AuthenticateService) SearchUserByLoginAndPassword(userFromRequest entitys.User, repository user.IUserRepository) (entitys.User, error) {
 	response := entitys.User{}
-	hashPassword, err := s.Encrypt.GenerateHash(userFromRequest.Password)
+
+	userFromDatabase, err := repository.GetUserByLogin(userFromRequest.Login)
 	if err != nil {
 		return response, err
 	}
-	userFromDatabase, err := repository.GetUserByLoginAndPassword(userFromRequest.Login, string(hashPassword))
+
+	err = s.Encrypt.VerifyHash(userFromRequest.Password, userFromDatabase.Password)
 	if err != nil {
 		return response, err
 	}
@@ -64,7 +66,7 @@ func (s AuthenticateService) SearchUser(userFromRequest entitys.User, repository
 
 func (s AuthenticateService) GenerateWebToken(userFromDatabase entitys.User) (string, error) {
 	tokenAsString := ""
-	tokenAsString, err := s.Token.CreateToken(userFromDatabase.ID)
+	tokenAsString, err := s.Token.CreateToken(userFromDatabase)
 	if err != nil {
 		return tokenAsString, err
 	}

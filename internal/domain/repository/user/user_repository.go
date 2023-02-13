@@ -14,7 +14,7 @@ const (
 )
 
 type IUserRepository interface {
-	GetUserByLoginAndPassword(login, password string) (entitys.User, error)
+	GetUserByLogin(login string) (entitys.User, error)
 	GetUserByID(id uint64) (entitys.User, error)
 	End() error
 }
@@ -34,9 +34,9 @@ func NewUserRepository(conf configuration.AppConfigurations) (*UserRepository, e
 	return userRepository, nil
 }
 
-func (u UserRepository) GetUserByLoginAndPassword(login, password string) (entitys.User, error) {
-	query := fmt.Sprintf("SELECT id, login, password FROM %v WHERE login=? AND password=?", TABLE_NAME)
-	rows, err := u.database.Query(query, login, password)
+func (u UserRepository) GetUserByLogin(login string) (entitys.User, error) {
+	query := fmt.Sprintf("SELECT id, login, password FROM %v WHERE login=?", TABLE_NAME)
+	rows, err := u.database.Query(query, login)
 
 	if err != nil {
 		return entitys.User{}, err

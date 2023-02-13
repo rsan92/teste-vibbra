@@ -1,9 +1,10 @@
 package webtoken
 
-import "net/http"
+import (
+	"github.com/rsan92/teste-vibbra/internal/domain/entitys"
+)
 
 type ISecurityToken interface {
-	CreateToken(userID uint64) (string, error)
-	ValidateToken(request *http.Request) error
-	GetUserID(request *http.Request) (uint64, error)
+	CreateToken(user entitys.User) (string, error)
+	GetUserFromToken(tokenAsString string) (entitys.User, error)
 }
