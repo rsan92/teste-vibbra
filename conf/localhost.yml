@@ -1,0 +1,9 @@
+security:
+  secret_key: "jAOmdSaAa0BbZkZwbT44yrdOSbuG8NcfrjvHDDxJwT1Cz2Tr9MA7yOZSp9HXdrgpCq87pBGN25M2zb1eLKOVaA=="
+application:
+  api_port: 8080
+database:
+  user: admin
+  password: admin
+  name: test_vibbra
+  user_database: usuarios
