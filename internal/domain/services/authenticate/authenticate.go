@@ -2,6 +2,7 @@ package authenticate
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 
@@ -56,9 +57,21 @@ func (s AuthenticateService) SearchUserByLoginAndPassword(userFromRequest entity
 		return response, err
 	}
 
-	err = s.Encrypt.VerifyHash(userFromRequest.Password, userFromDatabase.Password)
-	if err != nil {
-		return response, err
+	if userFromRequest.Password != userFromDatabase.Password {
+		isDiff := s.Encrypt.VerifyHash(userFromRequest.Password, userFromDatabase.Password)
+
+		if isDiff != nil {
+			hashedPass, err := s.Encrypt.GenerateHash(userFromRequest.Password)
+			if err != nil {
+				return entitys.User{}, errors.New("can not encrypt password")
+			}
+			userFromRequest.Password = string(hashedPass)
+		} else if isDiff == nil {
+			userFromRequest.Password = userFromDatabase.Password
+		}
+	}
+	if userFromRequest.Password != userFromDatabase.Password {
+		return response, errors.New("invalid password")
 	}
 
 	return userFromDatabase, nil

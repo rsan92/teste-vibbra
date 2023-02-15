@@ -19,13 +19,14 @@ type ISQLDatabases interface {
 type SQLDatabase struct{}
 
 func (db SQLDatabase) GetInstance(conf configuration.AppConfigurations) (*sql.DB, error) {
-	if DabaseInstance == nil {
+	if DabaseInstance == nil || DabaseInstance.Stats().OpenConnections == 0 {
 		dbase, err := db.configuraConnection(conf)
 		if err != nil {
 			return nil, err
 		}
 		DabaseInstance = dbase
 	}
+
 	return DabaseInstance, nil
 }
 

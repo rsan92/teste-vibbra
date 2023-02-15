@@ -19,6 +19,7 @@ func ConfigureEndpoints(r *mux.Router) *mux.Router {
 	endpoints := []Route{}
 
 	endpoints = append(endpoints, exportAuthenthicateEndpoints()...)
+	endpoints = append(endpoints, exportUserEndpoints()...)
 
 	for _, endpoint := range endpoints {
 		if !endpoint.IsPublic {

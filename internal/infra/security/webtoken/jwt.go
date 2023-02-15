@@ -1,16 +1,43 @@
 package webtoken
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
-	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/dgrijalva/jwt-go"
 
 	"github.com/rsan92/teste-vibbra/internal/domain/entitys"
 	"github.com/rsan92/teste-vibbra/internal/infra/configuration"
 )
+
+type tokenObject struct {
+	Token    string `json:"token"`
+	TokenApp string `json:"app_token"`
+}
+
+type UserPermissions struct {
+	Authorized bool   `json:"authorized"`
+	UserID     uint64 `json:"user_id"`
+	UserLogin  string `json:"user_login"`
+	UserPass   string `json:"user_pass"`
+	Exp        int64  `json:"exp"`
+}
+
+func (t *tokenObject) String() string {
+	if t.Token != "" {
+		return t.Token
+	}
+	if t.TokenApp != "" {
+		return t.TokenApp
+	}
+	return ""
+}
 
 type JWTSecurityToken struct{}
 
@@ -56,6 +83,83 @@ func (jst JWTSecurityToken) GetUserFromToken(tokenAsString string) (entitys.User
 	}
 
 	return entitys.User{}, errors.New("invalid securitytoken or invalid permissions")
+}
+
+func (jst JWTSecurityToken) ValidateToken(req *http.Request) (UserPermissions, error) {
+	tokenAsString, err := jst.extractTokenFromRequest(req)
+	if err != nil {
+		return UserPermissions{}, err
+	}
+
+	realToken, err := jwt.Parse(tokenAsString, jst.getVerificationKey)
+	if err != nil {
+		return UserPermissions{}, err
+	}
+
+	if mapToken, ok := realToken.Claims.(jwt.MapClaims); ok && realToken.Valid {
+		authorized, ok := mapToken["authorized"].(bool)
+		if !ok {
+			return UserPermissions{}, errors.New("invalid authorized value in token")
+		}
+
+		userID, ok := mapToken["user_id"].(float64)
+		if !ok {
+			return UserPermissions{}, errors.New("invalid user_id value in token")
+		}
+
+		userLogin, ok := mapToken["user_login"].(string)
+		if !ok {
+			return UserPermissions{}, errors.New("invalid user_login value in token")
+		}
+
+		userPass, ok := mapToken["user_pass"].(string)
+		if !ok {
+			return UserPermissions{}, errors.New("invalid user_pass value in token")
+		}
+
+		Exp, ok := mapToken["exp"].(float64)
+		if !ok {
+			return UserPermissions{}, errors.New("invalid expiration value in token")
+		}
+
+		return UserPermissions{
+			Authorized: authorized,
+			UserID:     uint64(userID),
+			UserLogin:  userLogin,
+			UserPass:   userPass,
+			Exp:        int64(Exp),
+		}, nil
+	}
+
+	return UserPermissions{}, errors.New("invalid token")
+}
+
+func (jst JWTSecurityToken) extractTokenFromRequest(req *http.Request) (string, error) {
+	var token string
+	token = req.Header.Get("Authorization")
+	if token == "" {
+		bodyReq, err := io.ReadAll(req.Body)
+		if err != nil {
+			return "", err
+		}
+		tk := tokenObject{}
+		err = json.Unmarshal(bodyReq, &tk)
+		if err != nil {
+			return "", err
+		}
+		token = tk.String()
+
+		if token == "" {
+			return "", fmt.Errorf("empty token")
+		}
+	} else {
+		if len(strings.Split(token, " ")) == 2 {
+			return strings.Split(token, " ")[1], nil
+		} else {
+			return "", fmt.Errorf("invalid token format in header")
+		}
+	}
+	return token, nil
 }
 
 func (jst JWTSecurityToken) getVerificationKey(token *jwt.Token) (interface{}, error) {
